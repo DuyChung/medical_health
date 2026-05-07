@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  EDITOR
+}
+
+model Admin {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String
+  role         AdminRole         @default(EDITOR)
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  cases        CaseReport[]
+  documents    MedicalDocument[]
+}
+
+model CaseReport {
+  id          String       @id @default(cuid())
+  title       String
+  summary     String
+  content     String
+  imageUrl    String?
+  location    String
+  occurredAt  DateTime
+  severity    Severity
+  urgent      Boolean      @default(false)
+  published   Boolean      @default(true)
+  viewCount   Int          @default(0)
+  adminId     String
+  admin       Admin        @relation(fields: [adminId], references: [id])
+  attachments Attachment[]
+  views       PostView[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([severity])
+  @@index([occurredAt])
+  @@index([urgent])
+}
+
+model Attachment {
+  id           String      @id @default(cuid())
+  originalName String
+  fileName     String
+  mimeType     String
+  size         Int
+  url          String
+  caseReportId String?
+  caseReport   CaseReport? @relation(fields: [caseReportId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+}
+
+model MedicalDocument {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  category     String
+  issuedBy     String
+  issuedAt     DateTime
+  originalName String
+  fileName     String
+  mimeType     String
+  size         Int
+  url          String
+  downloadCount Int     @default(0)
+  adminId      String
+  admin        Admin    @relation(fields: [adminId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([issuedAt])
+}
+
+model SiteVisit {
+  id        String   @id @default(cuid())
+  path      String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model PostView {
+  id           String     @id @default(cuid())
+  caseReportId String
+  caseReport   CaseReport @relation(fields: [caseReportId], references: [id], onDelete: Cascade)
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime   @default(now())
+
+  @@index([createdAt])
+}
